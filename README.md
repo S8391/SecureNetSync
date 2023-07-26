@@ -56,9 +56,10 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 ## Installation
 
 1. Clone this repository to your local machine:
-
-* `git clone https://github.com/yourusername/conntrack-sync.git` 
-* `cd conntrack-sync`
+```
+git clone https://github.com/yourusername/conntrack-sync.git
+cd conntrack-sync
+```
 
 2. Install the required dependencies: `pip install -r requirements.txt`
 
@@ -107,9 +108,9 @@ If you can log in without entering a password, SSH key-based authentication is s
 ## AES Encryption Setup
 
 1. Generate an AES secret key file named `secret.key` with a length of 32 bytes (256 bits). You can use the following command:
-
-`python -c "from Crypto.Random import get_random_bytes; key = get_random_bytes(32); open('secret.key', 'wb').write(key)"`
-
+```
+python -c "from Crypto.Random import get_random_bytes; key = get_random_bytes(32); open('secret.key', 'wb').write(key)"
+```
 2. Ensure that the `secret.key` file is located in the same directory as the `conntrack_sync.py` script. The script will use this key for AES encryption and decryption during data transfer.
 
 
