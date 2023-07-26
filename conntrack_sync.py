@@ -165,7 +165,7 @@ def transfer_data_to_server(data: str, server: str, ipv6: bool):
     encrypted_data = encrypt_data(data)
 
     ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh_client.set_missing_host_key_policy(paramiko.RejectPolicy())  # Fix: Set RejectPolicy to reject unknown host keys
 
     try:
         ssh_client.connect(server, username=SSH_USERNAME, key_filename=SSH_KEY_FILE)
