@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Dashboard</title>
+</head>
+
+<body>
+    <h1>Monitoring Dashboard</h1>
+    <div id="status-container">
+        <p>Status:</p>
+        <pre id="status-info"></pre>
+    </div>
+
+    <script>
+        function updateStatus() {
+            // Make a GET request to the server to fetch status data
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update the status information in the HTML
+                    const statusContainer = document.getElementById('status-info');
+                    statusContainer.textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                    const statusContainer = document.getElementById('status-info');
+                    statusContainer.textContent = 'Error fetching status.';
+                });
+        }
+
+        // Call the updateStatus function initially and every 5 seconds (adjust as needed)
+        updateStatus();
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+
+</html>
