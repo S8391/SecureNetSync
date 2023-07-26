@@ -120,7 +120,7 @@ def transfer_data_to_server(data: str, client: paramiko.SSHClient, ipv6: bool = 
 
 def encrypt_data(data: str) -> str:
     # Generate random AES key and initialization vector
-    aes_key = get_random_bytes(AES_KEY_LENGTH)
+    aes_key = get_aes_key()
     iv = get_random_bytes(AES_BLOCK_SIZE)
 
     # Create AES cipher with CFB mode
@@ -142,6 +142,7 @@ def decrypt_data(encrypted_data: str) -> str:
     iv = encrypted_data[:AES_BLOCK_SIZE]
 
     # Create AES cipher with CFB mode using the saved IV
+    aes_key = get_aes_key()
     cipher = AES.new(aes_key, AES.MODE_CFB, iv=iv)
 
     # Decrypt the data and return as string
@@ -212,6 +213,16 @@ def is_ipv6(address: str) -> bool:
     except socket.error:
         return False
 
+def get_aes_key() -> bytes:
+    # Read the AES key from the secret.key file
+    with open('secret.key', 'rb') as key_file:
+        aes_key = key_file.read()
+
+    if len(aes_key) != AES_KEY_LENGTH:
+        raise ValueError("Invalid AES key length. Ensure that secret.key contains a 32-byte (256-bit) key.")
+
+    return aes_key
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Conntrack Synchronization Script')
     parser.add_argument('--servers', metavar='SERVER', type=str, nargs='+', required=True,
@@ -223,5 +234,9 @@ if __name__ == "__main__":
 
     SERVERS = args.servers
     CENTRAL_SERVER = args.central_server
+    SSH_CONNECTION_TIMEOUT = 5
+    SSH_CONNECTION_RETRIES = 3
+    SSH_CONNECTION_RETRY_DELAY = 5
+    MAX_THREADS = 10
 
     main()
