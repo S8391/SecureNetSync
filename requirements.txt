@@ -1,0 +1,4 @@
+argparse
+paramiko
+pycryptodome
+tqdm
