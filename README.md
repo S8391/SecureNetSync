@@ -22,6 +22,7 @@ This is a Python script for synchronizing the state of conntrack connections bet
 
 The `conntrack_sync.py` script allows you to synchronize the connection tracking data (conntrack) between multiple servers. It uses SSH key-based authentication for secure data transfer and operates in real-time without the need for additional software like `conntrackd`.
 
+
 ## Features
 
 - Real-time synchronization of conntrack connections between servers.
@@ -29,18 +30,22 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 - Optional periodic synchronization for continuous data update.
 - Flexible and configurable with customizable SSH timeout and retry settings.
 - Detailed logging for monitoring and debugging.
+- Progress bar during synchronization.
+- AES encryption for data security.
+- Command-line argument parsing for interactive setup.
+- IPv4 and IPv6 support.
+
 
 ## Installation
 
 1. Clone this repository to your local machine:
 
 `git clone https://github.com/yourusername/conntrack-sync.git`
+
 `cd conntrack-sync`
 
+2. Install the required dependencies: `pip install -r requirements.txt`
 
-2. Install the required dependencies:
-
-`pip install -r requirements.txt`
 
 
 ## Usage
@@ -49,11 +54,13 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 
 2. Replace the placeholder IP addresses or hostnames in the `SERVERS` and `CENTRAL_SERVER` variables in the `conntrack_sync.py` script with the actual IP addresses or hostnames of your servers.
 
-3. Run the script using Python: `python conntrack_sync.py`
+3. Run the script using Python: `python conntrack_sync.py --servers server1_ip_or_hostname server2_ip_or_hostname server3_ip_or_hostname --central-server central_server_ip_or_hostname`
 
-
+Optional: To use IPv6 for synchronization, add the `--ipv6` flag.
 
 The script will synchronize the conntrack data between all servers and store the shared data on the central server.
+
+
 
 ## Configuration
 
@@ -64,6 +71,9 @@ You can configure the script behavior by modifying the constants in the `conntra
 - `SSH_CONNECTION_RETRY_DELAY`: The delay (in seconds) between SSH connection retries.
 - `MAX_THREADS`: The maximum number of threads to use for synchronization.
 - `SYNC_INTERVAL`: The synchronization interval (in seconds) for periodic synchronization.
+- `AES_KEY_LENGTH`: The length of the AES encryption key in bytes.
+- `AES_BLOCK_SIZE`: The AES encryption block size in bytes.
+
 
 ## SSH Key Setup
 
@@ -75,21 +85,21 @@ For the script to work, SSH key-based authentication must be set up between the 
 
 3. Test SSH access to each server to ensure passwordless login is working: `ssh user@server_ip`
 
-
 If you can log in without entering a password, SSH key-based authentication is set up correctly.
+
+
 
 ## Options
 
 The script provides the following optional parameters:
-
 ```
-usage: conntrack_sync.py [-h] [--interval INTERVAL]
+usage: conntrack_sync.py [-h] [--interval INTERVAL] [--ipv6]
 
 optional arguments:
 -h, --help show this help message and exit
 --interval INTERVAL Set the synchronization interval in seconds for periodic synchronization (default: 60 seconds).
+--ipv6 Use IPv6 for synchronization.
 ```
-
 
 ## Logging
 
@@ -102,6 +112,19 @@ Contributions are welcome! If you have any suggestions, bug reports, or improvem
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
