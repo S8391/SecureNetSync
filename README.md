@@ -13,7 +13,7 @@ The `conntrack_sync.py` is a powerful Python script designed to achieve real-tim
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [SSH Key Setup](#ssh-key-setup)
-- [AES Encryption Setup](#aes-key-setup)
+- [AES Encryption Setup](#aes-encryption-setup)
 - [Options](#options)
 - [Logging](#logging)
 - [Contributing](#contributing)
