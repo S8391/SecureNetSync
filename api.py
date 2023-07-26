@@ -122,7 +122,7 @@ def apply_conntrack_data():
         encrypted_data = request.get_data().decode('utf-8')
         data = decrypt_data(encrypted_data)
         conntrack_data = deserialize_conntrack_data(data)
-        apply_conntrack_data(conntrack_data)
+        apply_conntrack_data_to_db(conntrack_data)  # Rename to avoid naming conflict
         return jsonify({'message': 'Connection tracking data applied successfully.'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -133,7 +133,7 @@ def deserialize_conntrack_data(data: str) -> dict:
     except json.JSONDecodeError as e:
         raise ValueError(f"Failed to deserialize JSON data: {e}")
 
-def apply_conntrack_data(data: dict):
+def apply_conntrack_data_to_db(data: dict):  # Rename to avoid naming conflict
     try:
         # Apply the conntrack data to the local conntrack table
         create_connection_table()
@@ -143,15 +143,15 @@ def apply_conntrack_data(data: dict):
 
         for connection_id, connection_info in data.items():
             if connection_id not in EXCLUSION_LIST:
-                if connection_id in connection_tracking_table:
+                if connection_id in get_active_connection_ids(cursor):  # Helper function to get active connection IDs
                     # Update existing connection entry
-                    update_connection(connection, connection_id, connection_info)
+                    update_connection(cursor, connection_id, connection_info)
                 else:
                     # Create a new connection entry
-                    create_connection(connection, connection_id, connection_info)
+                    create_connection(cursor, connection_id, connection_info)
 
         # Perform cleanup of stale connections not present in the data
-        cleanup_stale_connections(connection, data.keys())
+        cleanup_stale_connections(cursor, data.keys())
 
         connection.commit()
         connection.close()
@@ -160,27 +160,28 @@ def apply_conntrack_data(data: dict):
     except Exception as e:
         print("An error occurred while applying connection tracking data:", e)
 
-def update_connection(connection, connection_id: str, connection_info: dict):
+def get_active_connection_ids(cursor):  # Helper function to get active connection IDs
+    cursor.execute(f'SELECT connection_id FROM {CONNECTION_TABLE_NAME}')
+    return set(row[0] for row in cursor.fetchall())
+
+def update_connection(cursor, connection_id: str, connection_info: dict):  # Pass cursor as an argument
     # Perform update of an existing connection entry in the connection tracking table
-    cursor = connection.cursor()
     cursor.execute(f'''
         UPDATE {CONNECTION_TABLE_NAME}
         SET source_ip = ?, destination_ip = ?, port = ?, protocol = ?
         WHERE connection_id = ?
     ''', (connection_info['source_ip'], connection_info['destination_ip'], connection_info['port'], connection_info['protocol'], connection_id))
 
-def create_connection(connection, connection_id: str, connection_info: dict):
+def create_connection(cursor, connection_id: str, connection_info: dict):  # Pass cursor as an argument
     # Perform creation of a new connection entry in the connection tracking table
-    cursor = connection.cursor()
     cursor.execute(f'''
         INSERT INTO {CONNECTION_TABLE_NAME} (connection_id, source_ip, destination_ip, port, protocol)
         VALUES (?, ?, ?, ?, ?)
     ''', (connection_id, connection_info['source_ip'], connection_info['destination_ip'], connection_info['port'], connection_info['protocol']))
 
-def cleanup_stale_connections(connection, active_connection_ids: set):
+def cleanup_stale_connections(cursor, active_connection_ids: set):  # Pass cursor as an argument
     # Perform cleanup of connections that are not present in the active_connection_ids
     # These connections are considered stale and can be removed from the connection tracking table
-    cursor = connection.cursor()
     cursor.execute(f'''
         DELETE FROM {CONNECTION_TABLE_NAME}
         WHERE connection_id NOT IN ({','.join(['?'] * len(active_connection_ids))})
