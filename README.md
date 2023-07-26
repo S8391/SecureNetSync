@@ -41,14 +41,17 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 
 **In Active Development:**
 
-- [ ] Configuration File (config.ini)
+- [x] Configuration File (config.ini)
+- [x] Command-line Argument
+- [x] Configurable Parameters
 - [ ] Status Check
 
 **Coming Soon:**
 
-- [ ] Exclusion List
-- [ ] Custom Logging Levels
-- [ ] Monitoring Dashboard
+- [x] Exclusion List
+- [x] Authentication Mechanism
+- [x] Custom Logging Levels
+- [x] Monitoring Dashboard
 - [ ] Alerting and Notifications
 - [ ] Selective Synchronization
 
