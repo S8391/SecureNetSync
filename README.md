@@ -15,7 +15,10 @@ The `conntrack_sync.py` is a powerful Python script designed to achieve real-tim
 - [SSH Key Setup](#ssh-key-setup)
 - [AES Encryption Setup](#aes-encryption-setup)
 - [Options](#options)
+- [API Usage](#api-usage)
+- [Database Setup](#database-setup)
 - [Logging](#logging)
+- [Database Setup](#database-setup)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -39,13 +42,10 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 **In Active Development:**
 
 - [ ] Configuration File (config.ini)
-- [ ] Command-line Argument
-- [ ] Configurable Parameters
 - [ ] Status Check
 
 **Coming Soon:**
 
-- [ ] Authentication Mechanism
 - [ ] Exclusion List
 - [ ] Custom Logging Levels
 - [ ] Monitoring Dashboard
@@ -55,21 +55,20 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 
 ## Installation
 
-1. Clone this repository to your local machine:
-```
-git clone https://github.com/S00013/Conntrack-Synchronization-Script.git
-```
-2. Navigate to the project directory:
-```
-cd Conntrack-Synchronization-Script
-```
+1. Clone this repository to your local machine: `git clone https://github.com/S00013/Conntrack-Synchronization-Script.git`
+2. Navigate to the project directory: `cd Conntrack-Synchronization-Script`
+
 
 3. Install the required dependencies:
-* For Windows
-             ```pip install -r requirements.txt```
+* For Windows:
+  ```
+  pip install -r requirements.txt
+  ```
 
-* For Linux
-           ```pip3 install -r requirements.txt```
+* For Linux:
+  ```
+  pip3 install -r requirements.txt
+  ```
 
 
 ## Usage
@@ -78,23 +77,37 @@ cd Conntrack-Synchronization-Script
 
 2. Replace the placeholder IP addresses or hostnames in the `SERVERS` and `CENTRAL_SERVER` variables in the `conntrack_sync.py` script with the actual IP addresses or hostnames of your servers.
 
-3. Run the script using Python: `python conntrack_sync.py --servers server1_ip_or_hostname server2_ip_or_hostname server3_ip_or_hostname --central-server central_server_ip_or_hostname`
+3. Run the script using Python:
 
+```
+   python conntrack_sync.py --servers server1_ip_or_hostname server2_ip_or_hostname server3_ip_or_hostname --central-server central_server_ip_or_hostname
+```
 Optional: To use IPv6 for synchronization, add the `--ipv6` flag.
 
-The script will synchronize the conntrack data between all servers and store the shared data on the central server.
 
+4. To use the monitoring dashboard, run the following command: `python monitoring_dashboard.py`
+
+Open your web browser and access the dashboard at `http://127.0.0.1:8000`.
 
 
 ## Configuration
 
-You can configure the script behavior by modifying the constants in the `conntrack_sync.py` script:
+You can configure the script behavior by modifying the values in the `config.ini` file:
 
+### Authentication Settings
+- `SECRET_KEY`: The secret key used for JWT token generation and validation.
+
+### Token Settings
+- `TOKEN_EXPIRATION_MINUTES`: The expiration time (in minutes) for the JWT authentication token.
+
+### Connection Settings
 - `SSH_CONNECTION_TIMEOUT`: The timeout (in seconds) for SSH connections to the servers.
 - `SSH_CONNECTION_RETRIES`: The number of retries in case of SSH connection failures.
 - `SSH_CONNECTION_RETRY_DELAY`: The delay (in seconds) between SSH connection retries.
 - `MAX_THREADS`: The maximum number of threads to use for synchronization.
 - `SYNC_INTERVAL`: The synchronization interval (in seconds) for periodic synchronization.
+
+### AES Encryption Settings
 - `AES_KEY_LENGTH`: The length of the AES encryption key in bytes.
 - `AES_BLOCK_SIZE`: The AES encryption block size in bytes.
 
@@ -105,9 +118,7 @@ For the script to work, SSH key-based authentication must be set up between the 
 
 1. Generate an SSH key pair on the local machine (if not already generated): `ssh-keygen -t rsa -b 4096`
 
-2. Copy the public key to the remote servers (replace `server_ip` with the actual IP address or hostname): `ssh-copy-id user@server_ip`
-
-3. Test SSH access to each server to ensure passwordless login is working: `ssh user@server_ip`
+2. Copy the public key to the remote servers (replace `server_ip` with the actual IP address or hostname): `ssh user@server_ip`
 
 If you can log in without entering a password, SSH key-based authentication is set up correctly.
 
@@ -115,9 +126,11 @@ If you can log in without entering a password, SSH key-based authentication is s
 ## AES Encryption Setup
 
 1. Generate an AES secret key file named `secret.key` with a length of 32 bytes (256 bits). You can use the following command:
+
 ```
-python -c "from Crypto.Random import get_random_bytes; key = get_random_bytes(32); open('secret.key', 'wb').write(key)"
+   python -c "from Crypto.Random import get_random_bytes; key = get_random_bytes(32); open('secret.key', 'wb').write(key)"
 ```
+
 2. Ensure that the `secret.key` file is located in the same directory as the `conntrack_sync.py` script. The script will use this key for AES encryption and decryption during data transfer.
 
 
@@ -125,25 +138,72 @@ python -c "from Crypto.Random import get_random_bytes; key = get_random_bytes(32
 
 The script provides the following optional parameters:
 ```
-usage: conntrack_sync.py [-h] [--interval INTERVAL] [--ipv6]
+   usage: conntrack_sync.py [-h] [--interval INTERVAL] [--ipv6]
 
-optional arguments:
--h, --help show this help message and exit
---interval INTERVAL Set the synchronization interval in seconds for periodic synchronization (default: 60 seconds).
---ipv6 Use IPv6 for synchronization.
+   optional arguments:
+   -h, --help show this help message and exit
+   --interval INTERVAL Set the synchronization interval in seconds for periodic synchronization (default: 60 seconds).
+   --ipv6 Use IPv6 for synchronization.
 ```
+
+## API Usage
+
+The Conntrack Synchronization Script provides an API that allows clients to synchronize connection tracking data. The API is built using Flask and provides two main endpoints:
+
+### 1. Get Token
+
+To access the API's endpoints, clients need to obtain an authentication token. To get the token, make a POST request to the `/token` endpoint: `POST http://127.0.0.1:5000/token`
+
+The response will contain the JWT token, which can be used to authenticate subsequent requests to protected endpoints.
+
+### 2. Apply Conntrack Data
+
+To synchronize conntrack data, clients can make a POST request to the `/apply` endpoint: `POST http://127.0.0.1:5000/apply`
+
+The conntrack data should be encrypted and included in the request body. The API will decrypt and apply the conntrack data to the local conntrack table.
+
+**Note:** Ensure that the request includes the 'Authorization' header with the JWT token obtained from the `/token` endpoint.
+
+
+## Database Setup
+
+The `api.py` script uses SQLite to store connection tracking data. Before running the script, make sure to create an SQLite database file named `connection_tracking.db` in the same directory as the `api.py` script. The script will automatically create the necessary table (`connection_tracking`) to store the conntrack data on the first run.
+
+To create the SQLite database and table, you can run the following command:
+
+```
+python -c "import sqlite3; connection = sqlite3.connect('connection_tracking.db'); cursor = connection.cursor(); cursor.execute('''CREATE TABLE IF NOT EXISTS connection_tracking (
+connection_id TEXT PRIMARY KEY,
+source_ip TEXT,
+destination_ip TEXT,
+port INT,
+protocol TEXT
+)'''); connection.commit(); connection.close()"
+```
+With the database set up, the `api.py` script will be ready to handle conntrack data synchronization requests.
+
 
 ## Logging
 
 The script logs its activity to a file named `conntrack_sync.log` in the current working directory. You can monitor this log file for synchronization status and any potential errors.
 
+
+## Database Setup
+
+The `api.py` script uses SQLite to store connection tracking data. Before running the script, make sure to create an SQLite database file named `connection_tracking.db` in the same directory as the `api.py` script. The script will automatically create the necessary table (`connection_tracking`) to store the conntrack data on the first run.
+
+
 ## Contributing
 
 Contributions are welcome! If you have any suggestions, bug reports, or improvements, please open an issue or submit a pull request.
 
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+
+
 
 
 
