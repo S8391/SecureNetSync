@@ -103,6 +103,7 @@ def decrypt_data(encrypted_data: str) -> str:
     iv = encrypted_data[:AES_BLOCK_SIZE]
 
     # Create AES cipher with CFB mode using the saved IV
+    aes_key = get_random_bytes(AES_KEY_LENGTH)
     cipher = AES.new(aes_key, AES.MODE_CFB, iv=iv)
 
     # Decrypt the data and return as string
@@ -124,8 +125,10 @@ def apply_conntrack_data():
         conntrack_data = deserialize_conntrack_data(data)
         apply_conntrack_data_to_db(conntrack_data)  # Rename to avoid naming conflict
         return jsonify({'message': 'Connection tracking data applied successfully.'}), 200
+    except ValueError as e:  # Catch the specific exception for JSON decoding error
+        return jsonify({'error': 'Invalid data format.'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal server error occurred.'}), 500
 
 def deserialize_conntrack_data(data: str) -> dict:
     try:
