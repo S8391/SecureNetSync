@@ -185,6 +185,7 @@ def transfer_data_to_server(data: str, server: str, ipv6: bool):
     finally:
         ssh_client.close()
 
+
 def exclude_data(data: dict, exclusion_list: set) -> dict:
     return {key: value for key, value in data.items() if key not in exclusion_list}
 
