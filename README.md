@@ -59,6 +59,7 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 ```
 git clone https://github.com/S00013/Conntrack-Synchronization-Script.git
 ```
+Then:
 ```
 cd Conntrack-Synchronization-Script
 ```
