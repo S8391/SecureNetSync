@@ -12,6 +12,13 @@ from Crypto.Random import get_random_bytes
 from base64 import b64encode, b64decode
 import os
 import socket
+import configparser
+from flask import Flask, request, jsonify, abort
+from functools import wraps
+from datetime import datetime, timedelta
+import jwt
+
+app = Flask(__name__)
 
 # Define conntrack synchronization interval in seconds (set to 60 seconds by default)
 SYNC_INTERVAL = 60
@@ -22,25 +29,24 @@ AES_BLOCK_SIZE = 16
 
 logging.basicConfig(filename='conntrack_sync.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
 
-class SSHClientWrapper:
-    def __init__(self, hostname: str, timeout: int):
-        self.hostname = hostname
-        self.timeout = timeout
-        self.client = None
+def load_auth_token():
+    with open('secret.key', 'rb') as key_file:
+        auth_token = key_file.read()
+    return auth_token
 
-    def __enter__(self):
-        self.client = self.create_ssh_client(self.hostname, self.timeout)
-        return self.client
+def get_auth_headers():
+    auth_token = load_auth_token()
+    return {'Authorization': f'Bearer {auth_token.decode("utf-8")}'}
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        if self.client:
-            self.client.close()
+def load_exclusion_list():
+    config = configparser.ConfigParser()
+    config.read('exclusion_list.ini')
+    exclusion_list = {entry.strip() for entry in config['EXCLUSION_LIST']['Entries'].split('\n') if entry.strip()}
+    return exclusion_list
 
-    def create_ssh_client(self, hostname: str, timeout: int) -> paramiko.SSHClient:
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(hostname, timeout=timeout)
-        return client
+def query_conntrack_table() -> str:
+    command = 'conntrack -L --json'
+    return run_command(command)
 
 def run_command(command: str) -> str:
     try:
@@ -51,72 +57,12 @@ def run_command(command: str) -> str:
         logging.error(f"Command output: {e.output}")
         raise
 
-def query_conntrack_table() -> str:
-    command = 'conntrack -L --json'
-    return run_command(command)
-
 def deserialize_conntrack_data(data: str) -> dict:
     try:
         return json.loads(data)
     except json.JSONDecodeError as e:
         logging.error(f"Failed to deserialize JSON data: {e}")
         raise
-
-def apply_conntrack_data(data: dict, server: str):
-    try:
-        conntrack_json = json.dumps(data)
-        encrypted_data = encrypt_data(conntrack_json)
-        command = f'ssh {server} "echo \'{encrypted_data}\' | base64 -d | openssl enc -aes-256-cbc -d -a -kfile secret.key | conntrack -R --force"'
-        subprocess.run(command, shell=True, check=True)
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to apply conntrack data on {server}: {e}")
-        raise
-
-def synchronize_conntrack(server: str, retries: int, retry_delay: int, ipv6: bool):
-    try:
-        # Step 1: Query local conntrack table
-        local_conntrack_data = query_conntrack_table()
-
-        # Step 2: Transfer data to central server
-        remote_conntrack_data = transfer_data_to_central_server(local_conntrack_data, retries, retry_delay)
-
-        # Step 3: Deserialize and apply data received from central server
-        conntrack_data = deserialize_and_apply_data(remote_conntrack_data, server)
-
-        # Step 4: Update connection tracking table on other servers
-        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = [executor.submit(transfer_data_to_server, conntrack_data, other_server, ipv6) for other_server in SERVERS if other_server != server]
-            for future in futures:
-                future.result()
-
-        logging.info(f"Connection tracking data synchronized successfully on {server}.")
-    except Exception as e:
-        logging.error(f"An error occurred during synchronization on {server}: {e}")
-
-def transfer_data_to_central_server(data: str, retries: int, retry_delay: int) -> str:
-    for retry in range(retries + 1):
-        try:
-            with SSHClientWrapper(CENTRAL_SERVER, SSH_CONNECTION_TIMEOUT) as client:
-                remote_conntrack_data = transfer_data_to_server(data, client)
-                return remote_conntrack_data
-
-        except paramiko.SSHException as e:
-            logging.warning(f"Failed to transfer data to central server. Retrying ({retry}/{retries})...")
-            if retry < retries:
-                time.sleep(retry_delay)
-            else:
-                raise
-
-def transfer_data_to_server(data: str, client: paramiko.SSHClient, ipv6: bool = False):
-    with client.get_transport().open_session() as session:
-        if ipv6:
-            session.exec_command(f'echo \'{data}\' | base64 -d | openssl enc -aes-256-cbc -d -a -kfile secret.key | conntrack -R --force')
-        else:
-            session.exec_command(f'echo \'{data}\' | base64 -d | openssl enc -aes-256-cbc -d -a -kfile secret.key')
-        remote_conntrack_data = session.makefile("r").read()
-        session.recv_exit_status()
-
-    return remote_conntrack_data
 
 def encrypt_data(data: str) -> str:
     # Generate random AES key and initialization vector
@@ -150,93 +96,141 @@ def decrypt_data(encrypted_data: str) -> str:
 
     return decrypted_data
 
+def apply_conntrack_data(data: dict, server: str):
+    try:
+        conntrack_json = json.dumps(data)
+        encrypted_data = encrypt_data(conntrack_json)
+        auth_headers = get_auth_headers()
+        command = f'curl -X POST {server}/apply -H "Content-Type: application/json" -H "Authorization: Bearer {auth_headers["Authorization"]}" -d "{encrypted_data}"'
+        subprocess.run(command, shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to apply conntrack data on {server}: {e}")
+        raise
+
+def synchronize_conntrack(server: str, retries: int, retry_delay: int, ipv6: bool, exclusion_list: set):
+    try:
+        # Step 1: Query local conntrack table
+        local_conntrack_data = query_conntrack_table()
+
+        # Step 2: Transfer data to central server
+        remote_conntrack_data = transfer_data_to_central_server(local_conntrack_data, retries, retry_delay)
+
+        # Step 3: Deserialize and apply data received from central server
+        conntrack_data = deserialize_and_apply_data(remote_conntrack_data, server)
+
+        # Step 4: Exclude data from the conntrack table based on the exclusion list
+        conntrack_data = exclude_data(conntrack_data, exclusion_list)
+
+        # Step 5: Update connection tracking table on other servers
+        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            futures = [executor.submit(transfer_data_to_server, conntrack_data, other_server, ipv6) for other_server in SERVERS if other_server != server]
+            for future in futures:
+                future.result()
+
+        logging.info(f"Connection tracking data synchronized successfully on {server}.")
+    except Exception as e:
+        logging.error(f"An error occurred during synchronization on {server}: {e}")
+
+def get_aes_key():
+    aes_key_file = 'secret.key'
+    if os.path.exists(aes_key_file):
+        with open(aes_key_file, 'rb') as file:
+            return file.read(AES_KEY_LENGTH)
+    else:
+        raise FileNotFoundError("AES key file not found. Generate an AES key and store it in 'secret.key'.")
+
+def transfer_data_to_central_server(data: str, retries: int, retry_delay: int) -> str:
+    central_server = CENTRAL_SERVER
+    logging.info(f"Transferring conntrack data to central server {central_server}...")
+    encrypted_data = encrypt_data(data)
+    auth_headers = get_auth_headers()
+
+    for _ in range(retries + 1):
+        try:
+            command = f'curl -X POST {central_server}/transfer -H "Content-Type: application/json" -H "Authorization: Bearer {auth_headers["Authorization"]}" -d "{encrypted_data}"'
+            response = subprocess.check_output(command, shell=True, universal_newlines=True, stderr=subprocess.STDOUT)
+            decrypted_response = decrypt_data(response.strip())
+            return decrypted_response
+        except subprocess.CalledProcessError as e:
+            logging.warning(f"Failed to transfer data to central server: {e.output}")
+            time.sleep(retry_delay)
+        except Exception as e:
+            logging.error(f"An error occurred during data transfer to central server: {e}")
+            raise
+
+    raise Exception("Failed to transfer data to central server after retries.")
+
+def transfer_data_to_server(data: str, server: str, ipv6: bool):
+    logging.info(f"Transferring conntrack data to server {server}...")
+    encrypted_data = encrypt_data(data)
+
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        ssh_client.connect(server, username=SSH_USERNAME, key_filename=SSH_KEY_FILE)
+        command = f'curl -X POST {server}/transfer -H "Content-Type: application/json" -d "{encrypted_data}"'
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        exit_status = stdout.channel.recv_exit_status()
+        if exit_status != 0:
+            logging.warning(f"Failed to transfer data to server {server}: {stderr.read().decode()}")
+        else:
+            logging.info(f"Connection tracking data transferred to server {server}.")
+    except paramiko.SSHException as e:
+        logging.warning(f"Failed to establish SSH connection to server {server}: {e}")
+    except socket.timeout as e:
+        logging.warning(f"SSH connection to server {server} timed out: {e}")
+    except Exception as e:
+        logging.error(f"An error occurred during data transfer to server {server}: {e}")
+    finally:
+        ssh_client.close()
+
+def exclude_data(data: dict, exclusion_list: set) -> dict:
+    return {key: value for key, value in data.items() if key not in exclusion_list}
+
 def deserialize_and_apply_data(encrypted_data: str, server: str) -> dict:
     decrypted_data = decrypt_data(encrypted_data)
-    conntrack_data = json.loads(decrypted_data)
+    conntrack_data = deserialize_conntrack_data(decrypted_data)
     apply_conntrack_data(conntrack_data, server)
     return conntrack_data
 
-def create_ssh_client(hostname: str) -> paramiko.SSHClient:
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(hostname, timeout=SSH_CONNECTION_TIMEOUT)
-    return client
-
-def synchronize_all_servers():
-    try:
-        # Step 6: Start synchronization threads for each server
-        threads = [threading.Thread(target=synchronize_conntrack, args=(server, SSH_CONNECTION_RETRIES, SSH_CONNECTION_RETRY_DELAY, is_ipv6(server))) for server in SERVERS]
-        for thread in threads:
-            thread.start()
-
-        # Step 7: Wait for all threads to complete
-        for thread in threads:
-            thread.join()
-
-        logging.info("All servers' connection tracking data synchronized successfully.")
-    except Exception as e:
-        logging.error(f"An error occurred during synchronization: {e}")
-
-def main():
-    try:
-        # Step 8: Ensure SSH keys are set up for passwordless connections between servers
-        validate_ssh_key_setup()
-
-        # Step 9: Synchronize the connection tracking data between all servers
-        synchronize_all_servers()
-
-        # Step 10: Schedule periodic synchronization
-        schedule_periodic_sync()
-
-    except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}")
-
-def validate_ssh_key_setup():
-    # Check if SSH keys are set up for passwordless connections between servers
-    ssh_key_check_command = 'ssh -o BatchMode=yes -o ConnectTimeout=5 -o PasswordAuthentication=no ' + \
-                            f'{CENTRAL_SERVER} "exit"'
-    try:
-        subprocess.run(ssh_key_check_command, shell=True, check=True)
-    except subprocess.CalledProcessError:
-        raise RuntimeError("SSH key-based authentication is not set up properly. " +
-                           "Please ensure SSH keys are exchanged and set up for passwordless connections.")
-
-def schedule_periodic_sync(interval: int = SYNC_INTERVAL):
-    # Schedule periodic synchronization in the background
-    threading.Timer(interval, schedule_periodic_sync, [interval]).start()
-    synchronize_all_servers()
-
-def is_ipv6(address: str) -> bool:
-    try:
-        socket.inet_pton(socket.AF_INET6, address)
-        return True
-    except socket.error:
-        return False
-
-def get_aes_key() -> bytes:
-    # Read the AES key from the secret.key file
-    with open('secret.key', 'rb') as key_file:
-        aes_key = key_file.read()
-
-    if len(aes_key) != AES_KEY_LENGTH:
-        raise ValueError("Invalid AES key length. Ensure that secret.key contains a 32-byte (256-bit) key.")
-
-    return aes_key
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Conntrack Synchronization Script')
-    parser.add_argument('--servers', metavar='SERVER', type=str, nargs='+', required=True,
-                        help='List of server IP addresses or hostnames to synchronize')
-    parser.add_argument('--central-server', metavar='CENTRAL_SERVER', type=str, required=True,
-                        help='IP address or hostname of the central server')
-    parser.add_argument('--ipv6', action='store_true', help='Use IPv6 for synchronization')
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Real-time synchronization of conntrack connections across multiple servers.")
+    parser.add_argument('--servers', required=True, nargs='+', help="List of server IP addresses or hostnames to synchronize conntrack data.")
+    parser.add_argument('--central-server', required=True, help="Central server IP address or hostname to store shared conntrack data.")
+    parser.add_argument('--ipv6', action='store_true', help="Use IPv6 for synchronization.")
     args = parser.parse_args()
+
+    # Read configuration from config.ini
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    SSH_USERNAME = config.get('SSH', 'SSH_USERNAME')
+    SSH_KEY_FILE = config.get('SSH', 'SSH_KEY_FILE')
+    MAX_THREADS = config.getint('GENERAL', 'MAX_THREADS')
 
     SERVERS = args.servers
     CENTRAL_SERVER = args.central_server
-    SSH_CONNECTION_TIMEOUT = 5
-    SSH_CONNECTION_RETRIES = 3
-    SSH_CONNECTION_RETRY_DELAY = 5
-    MAX_THREADS = 10
 
-    main()
+    # Load exclusion list
+    exclusion_list = load_exclusion_list()
+
+    try:
+        auth_headers = get_auth_headers()
+
+        # Step 1: Perform status check on all servers
+        for server in SERVERS:
+            status_check(server, auth_headers)
+
+        # Step 2: Synchronize conntrack data on all servers
+        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            futures = [executor.submit(synchronize_conntrack, server, config.getint('SSH', 'SSH_CONNECTION_RETRIES'), config.getint('SSH', 'SSH_CONNECTION_RETRY_DELAY'), args.ipv6, exclusion_list) for server in SERVERS]
+            for future in futures:
+                future.result()
+
+        # Step 3: Wait for the next synchronization interval
+        time.sleep(SYNC_INTERVAL)
+
+    except KeyboardInterrupt:
+        logging.info("Conntrack synchronization script terminated by user.")
+    except Exception as e:
+        logging.error(f"An error occurred during conntrack synchronization: {e}")
