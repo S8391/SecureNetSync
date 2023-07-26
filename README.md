@@ -17,8 +17,8 @@ The `conntrack_sync.py` is a powerful Python script designed to achieve real-tim
 - [Options](#options)
 - [API Usage](#api-usage)
 - [Database Setup](#database-setup)
+- [Troubleshooting](#troubleshooting) 
 - [Logging](#logging)
-- [Database Setup](#database-setup)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -188,9 +188,18 @@ With the database set up, the `api.py` script will be ready to handle conntrack 
 The script logs its activity to a file named `conntrack_sync.log` in the current working directory. You can monitor this log file for synchronization status and any potential errors.
 
 
-## Database Setup
+## Troubleshooting
 
-The `api.py` script uses SQLite to store connection tracking data. Before running the script, make sure to create an SQLite database file named `connection_tracking.db` in the same directory as the `api.py` script. The script will automatically create the necessary table (`connection_tracking`) to store the conntrack data on the first run.
+If you encounter any issues while using the Conntrack Synchronization Script, here are some common problems and their possible solutions:
+
+1. **SSH Key Authentication Fails**: Double-check that you have correctly set up SSH key-based authentication between the servers. Ensure that the public key is added to the remote servers' `authorized_keys` file.
+
+2. **AES Key Missing**: Make sure that the `secret.key` file with the AES secret key is present in the same directory as `conntrack_sync.py`.
+
+3. **Token Expiration**: If you receive 'Token has expired' errors, ensure that your system clock is accurate. The token's expiration time is sensitive to time discrepancies.
+
+4. **API Requests Fail**: Check that the API is running and accessible at the specified URL (default: `http://127.0.0.1:5000`). Verify that the correct token is included in the request headers for protected endpoints.
+
 
 
 ## Contributing
