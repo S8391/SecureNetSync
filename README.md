@@ -59,13 +59,17 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 ```
 git clone https://github.com/S00013/Conntrack-Synchronization-Script.git
 ```
-Then:
+2. Navigate to the project directory:
 ```
 cd Conntrack-Synchronization-Script
 ```
 
-2. Install the required dependencies: `pip install -r requirements.txt`
+3. Install the required dependencies:
+* For Windows
+             ```pip install -r requirements.txt```
 
+* For Linux
+           ```pip3 install -r requirements.txt```
 
 
 ## Usage
