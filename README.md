@@ -39,20 +39,24 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 - Command-line argument parsing for interactive setup.
 - IPv4 and IPv6 support.
 
-**In Active Development:**
+**Active Development Completed:**
 
 - [x] Configuration File (config.ini)
 - [x] Command-line Argument
 - [x] Configurable Parameters
-- [ ] Status Check
-
-**Coming Soon:**
-
 - [x] Exclusion List
 - [x] Authentication Mechanism
 - [x] Custom Logging Levels
 - [x] Monitoring Dashboard
+
+**In Active Development:**
+
 - [ ] Alerting and Notifications
+
+
+**Coming Soon:**
+
+- [ ] Status Check
 - [ ] Selective Synchronization
 
 
