@@ -40,9 +40,8 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 
 1. Clone this repository to your local machine:
 
-`git clone https://github.com/yourusername/conntrack-sync.git` 
-
- `cd conntrack-sync`
+* `git clone https://github.com/yourusername/conntrack-sync.git` 
+* `cd conntrack-sync`
 
 2. Install the required dependencies: `pip install -r requirements.txt`
 
