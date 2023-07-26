@@ -38,6 +38,31 @@
             overflow-x: auto;
         }
 
+        #conntrack-container {
+            background-color: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        #conntrack-info {
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+
+        #exclusion-list-container {
+            background-color: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
         #exclusion-list {
             font-family: monospace;
             white-space: pre-wrap;
@@ -67,11 +92,38 @@
             border-radius: 5px;
             padding: 8px 15px;
         }
+
+        .server-info {
+            background-color: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .server-info-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .server-info-content {
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
     </style>
 </head>
 
 <body>
     <h1>Conntrack Monitoring Dashboard</h1>
+
+    <div class="server-info">
+        <h2>Server Information:</h2>
+        <div class="server-info-content" id="server-info-content">
+            Loading server information...
+        </div>
+    </div>
 
     <div id="status-container">
         <h2>Status:</h2>
@@ -92,6 +144,7 @@
     <div class="button-container">
         <button class="button" onclick="togglePeriodicSync()">Toggle Periodic Sync</button>
         <button class="button" onclick="manualSync()">Manual Sync</button>
+        <button class="button" onclick="applyConntrackData()">Apply Conntrack Data</button>
     </div>
 
     <script>
@@ -159,18 +212,43 @@
                 });
         }
 
-        function updateDashboard() {
-            updateStatus();
-            updateConntrackData();
-            updateExclusionList();
-
-            if (periodicSync) {
-                setTimeout(updateDashboard, 5000);
-            }
+        function applyConntrackData() {
+            fetch('/apply', { method: 'POST' })
+                .then(() => {
+                    console.log('Conntrack data application triggered.');
+                })
+                .catch(error => {
+                    console.error('Error triggering conntrack data application:', error);
+                });
         }
 
-        // Call the updateDashboard function initially
-        updateDashboard();
+        function fetchServerInfo() {
+            fetch('/server-info')
+                .then(response => response.json())
+                .then(data => {
+                    const serverInfoContainer = document.getElementById('server-info-content');
+                    serverInfoContainer.textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    console.error('Error fetching server information:', error);
+                    const serverInfoContainer = document.getElementById('server-info-content');
+                    serverInfoContainer.textContent = 'Error fetching server information.';
+                });
+        }
+
+        // Call the updateDashboard function initially and every 5 seconds (adjust as needed)
+        updateStatus();
+        updateConntrackData();
+        updateExclusionList();
+        fetchServerInfo();
+
+        if (periodicSync) {
+            setInterval(() => {
+                updateStatus();
+                updateConntrackData();
+                updateExclusionList();
+            }, 5000);
+        }
     </script>
 </body>
 
