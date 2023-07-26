@@ -13,6 +13,7 @@ The `conntrack_sync.py` is a powerful Python script designed to achieve real-tim
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [SSH Key Setup](#ssh-key-setup)
+- [AES Encryption Setup](#aes-key-setup)
 - [Options](#options)
 - [Logging](#logging)
 - [Contributing](#contributing)
@@ -86,6 +87,14 @@ For the script to work, SSH key-based authentication must be set up between the 
 
 If you can log in without entering a password, SSH key-based authentication is set up correctly.
 
+
+## AES Encryption Setup
+
+1. Generate an AES secret key file named `secret.key` with a length of 32 bytes (256 bits). You can use the following command:
+
+`python -c "from Crypto.Random import get_random_bytes; key = get_random_bytes(32); open('secret.key', 'wb').write(key)"`
+
+2. Ensure that the `secret.key` file is located in the same directory as the `conntrack_sync.py` script. The script will use this key for AES encryption and decryption during data transfer.
 
 
 ## Options
