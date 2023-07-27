@@ -5,7 +5,7 @@
 
 **Please remember this is in active-development**
 
-The `conntrack_sync.py` is a powerful Python script designed to achieve real-time synchronization of conntrack connections across multiple servers without the need for conntrackd. By leveraging SSH key-based authentication and AES encryption, it ensures secure and efficient data transfer between servers. This script is perfect for maintaining consistent network state across distributed environments, enabling seamless conntrack synchronization with minimal overhead. With additional features like periodic synchronization, detailed logging, and support for IPv4 and IPv6, it provides a robust and flexible solution for managing conntrack data synchronization in a variety of network setups.
+The `SecureNetSync` is a powerful Python script designed to achieve real-time synchronization of conntrack connections across multiple servers without the need for conntrackd. By leveraging SSH key-based authentication and AES encryption, it ensures secure and efficient data transfer between servers. This script is perfect for maintaining consistent network state across distributed environments, enabling seamless conntrack synchronization with minimal overhead. With additional features like periodic synchronization, detailed logging, and support for IPv4 and IPv6, it provides a robust and flexible solution for managing conntrack data synchronization in a variety of network setups.
 
 ## Table of Contents
 
