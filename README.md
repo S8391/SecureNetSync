@@ -54,12 +54,13 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 **In Active Development:**
 
 - [ ] Alerting and Notifications
+- [ ] Status Check
 
 
 **Coming Soon:**
 
-- [ ] Status Check
 - [ ] Selective Synchronization
+- [ ] Much More
 
 
 ## Installation
