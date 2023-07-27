@@ -1,0 +1,4 @@
+Flask==2.0.1
+PyJWT==2.3.0
+cryptography==3.4.7
+paramiko==2.8.0
