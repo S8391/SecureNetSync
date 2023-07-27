@@ -55,12 +55,15 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 
 - [ ] Alerting and Notifications
 - [ ] Status Check
+- [ ] Create Logging Chains
+- [ ] Check Privileges
 
 
 **Coming Soon:**
 
 - [ ] Selective Synchronization
-- [ ] Much More
+- [ ] Handle Port Scanning and Attack Prevention
+- [ ] Manage IPv4 and IPv6 Policies
 
 
 ## Installation
