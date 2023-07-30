@@ -57,6 +57,7 @@ The `conntrack_sync.py` script allows you to synchronize the connection tracking
 - [ ] Status Check
 - [ ] Create Logging Chains
 - [ ] Check Privileges
+- [ ] More statistics on dashboard
 
 
 **Coming Soon:**
