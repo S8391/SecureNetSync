@@ -27,7 +27,7 @@ def get_token():
 @app.route('/')
 def index():
     return render_template('index.html')
-
+# Needs updated as doesnt resolve correct load-status on the server-stacks 
 @app.route('/status')
 def get_status():
     try:
